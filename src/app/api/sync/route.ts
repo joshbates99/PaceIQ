@@ -17,18 +17,24 @@ export async function POST() {
   try {
     const accessToken = await getValidAccessToken(userId)
 
-    const res = await fetch(
-      'https://www.strava.com/api/v3/athlete/activities?per_page=200',
-      { headers: { Authorization: `Bearer ${accessToken}` } }
-    )
-
-    if (!res.ok) {
-      const body = await res.text()
-      throw new Error(`Strava API error ${res.status}: ${body}`)
+    const allActivities: StravaActivity[] = []
+    let page = 1
+    while (true) {
+      const res = await fetch(
+        `https://www.strava.com/api/v3/athlete/activities?per_page=200&page=${page}`,
+        { headers: { Authorization: `Bearer ${accessToken}` } }
+      )
+      if (!res.ok) {
+        const body = await res.text()
+        throw new Error(`Strava API error ${res.status}: ${body}`)
+      }
+      const page_activities: StravaActivity[] = await res.json()
+      allActivities.push(...page_activities)
+      if (page_activities.length < 200) break
+      page++
     }
 
-    const activities: StravaActivity[] = await res.json()
-    const runs = activities.filter((a) => a.type === 'Run')
+    const runs = allActivities.filter((a) => a.type === 'Run')
 
     if (runs.length === 0) {
       return NextResponse.json({ synced: 0 })
