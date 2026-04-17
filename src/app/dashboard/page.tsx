@@ -20,10 +20,10 @@ function formatDate(d: string) {
 // ── Personal bests (fetched from analytics) ───────────────────────────────────
 
 const PB_DISTANCES = [
-  { label: '5K', target: 5000, min: 5000 },
-  { label: '10K', target: 10000, min: 10000 },
-  { label: 'Half Marathon', target: 21097, min: 21097 },
-  { label: 'Marathon', target: 42195, min: 42195 },
+  { label: '5K', target: 5000, min: 4800 },
+  { label: '10K', target: 10000, min: 9700 },
+  { label: 'Half Marathon', target: 21097, min: 20500 },
+  { label: 'Marathon', target: 42195, min: 41000 },
 ]
 
 function formatFinishTime(seconds: number): string {

@@ -29,10 +29,10 @@ function buildContext(runs: Activity[]) {
   const formatPace = (mpk: number) => `${Math.floor(mpk)}:${Math.round((mpk % 1) * 60).toString().padStart(2, '0')}/km`
 
   const pbs = [
-    { label: '5K', target: 5000, min: 5000 },
-    { label: '10K', target: 10000, min: 10000 },
-    { label: 'Half Marathon', target: 21097, min: 21097 },
-    { label: 'Marathon', target: 42195, min: 42195 },
+    { label: '5K', target: 5000, min: 4800 },
+    { label: '10K', target: 10000, min: 9700 },
+    { label: 'Half Marathon', target: 21097, min: 20500 },
+    { label: 'Marathon', target: 42195, min: 41000 },
   ].flatMap(t => {
     const c = runs.filter(a => a.distance >= t.min)
     if (!c.length) return []

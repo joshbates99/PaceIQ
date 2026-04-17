@@ -18,7 +18,7 @@ export async function POST() {
     const accessToken = await getValidAccessToken(userId)
 
     const res = await fetch(
-      'https://www.strava.com/api/v3/athlete/activities?per_page=50',
+      'https://www.strava.com/api/v3/athlete/activities?per_page=200',
       { headers: { Authorization: `Bearer ${accessToken}` } }
     )
 
