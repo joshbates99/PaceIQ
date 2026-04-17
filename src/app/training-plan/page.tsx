@@ -19,6 +19,11 @@ interface Preferences {
   allow_double_days: boolean
   experience_level: string
   notes: string
+  injury_active: boolean
+  injury_location: string
+  severity_level: string
+  injury_constraints: string[]
+  injury_notes: string
 }
 
 interface DayPlan {
@@ -174,7 +179,7 @@ function WeekStrip({ days }: { days: DayPlan[] }) {
 
 // ── Page ──────────────────────────────────────────────────────────────────────
 
-const DEFAULT_PREFS: Preferences = { runs_per_week: 5, gym_days_per_week: 0, allow_double_days: false, experience_level: 'intermediate', notes: '' }
+const DEFAULT_PREFS: Preferences = { runs_per_week: 5, gym_days_per_week: 0, allow_double_days: false, experience_level: 'intermediate', notes: '', injury_active: false, injury_location: '', severity_level: 'mild', injury_constraints: [], injury_notes: '' }
 
 export default function TrainingPlan() {
   const { data: session, status } = useSession()
@@ -202,7 +207,7 @@ export default function TrainingPlan() {
     const prefsData = await prefsRes.json()
     setState(planData)
     if (prefsData && prefsData.runs_per_week != null) {
-      const p = { runs_per_week: prefsData.runs_per_week, gym_days_per_week: prefsData.gym_days_per_week ?? 0, allow_double_days: prefsData.allow_double_days ?? false, experience_level: prefsData.experience_level ?? 'intermediate', notes: prefsData.notes ?? '' }
+      const p: Preferences = { runs_per_week: prefsData.runs_per_week, gym_days_per_week: prefsData.gym_days_per_week ?? 0, allow_double_days: prefsData.allow_double_days ?? false, experience_level: prefsData.experience_level ?? 'intermediate', notes: prefsData.notes ?? '', injury_active: prefsData.injury_active ?? false, injury_location: prefsData.injury_location ?? '', severity_level: prefsData.severity_level ?? 'mild', injury_constraints: prefsData.injury_constraints ?? [], injury_notes: prefsData.injury_notes ?? '' }
       setPrefs(p)
       setPrefsDraft(p)
       setPrefsSet(true)
@@ -363,6 +368,81 @@ export default function TrainingPlan() {
                     rows={2}
                     className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
                   />
+                </div>
+
+                {/* ── Injury / Limitation ── */}
+                <div className="border-t border-gray-100 pt-4 space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-xs font-bold text-gray-700">Current Injury / Physical Limitation</p>
+                      <p className="text-xs text-gray-400 mt-0.5">Adapts your plan — not medical advice</p>
+                    </div>
+                    <button onClick={() => setPrefsDraft(d => ({ ...d, injury_active: !d.injury_active, ...(d.injury_active ? { injury_location: '', severity_level: 'mild', injury_constraints: [], injury_notes: '' } : {}) }))}
+                      className={`relative w-10 h-6 rounded-full transition-colors flex-shrink-0 ${prefsDraft.injury_active ? 'bg-orange-500' : 'bg-gray-200'}`}>
+                      <span className={`absolute top-1 w-4 h-4 bg-white rounded-full shadow transition-transform ${prefsDraft.injury_active ? 'translate-x-5' : 'translate-x-1'}`} />
+                    </button>
+                  </div>
+
+                  {prefsDraft.injury_active && (
+                    <div className="space-y-4 bg-orange-50 rounded-xl p-4 border border-orange-100">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                          <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide block mb-1.5">Location</label>
+                          <input
+                            value={prefsDraft.injury_location}
+                            onChange={e => setPrefsDraft(d => ({ ...d, injury_location: e.target.value }))}
+                            placeholder="e.g. knee, ankle, hip, foot"
+                            className="w-full text-sm border border-orange-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-orange-400 bg-white"
+                          />
+                        </div>
+                        <div>
+                          <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide block mb-1.5">Severity</label>
+                          <div className="flex gap-2">
+                            {[{v:'mild',label:'Mild'},{v:'moderate',label:'Moderate'},{v:'severe',label:'Severe'}].map(s => (
+                              <button key={s.v} onClick={() => setPrefsDraft(d => ({ ...d, severity_level: s.v }))}
+                                className={`flex-1 py-1.5 rounded-lg text-xs font-semibold transition-colors ${prefsDraft.severity_level === s.v ? (s.v === 'severe' ? 'bg-red-500 text-white' : s.v === 'moderate' ? 'bg-orange-400 text-white' : 'bg-yellow-400 text-white') : 'bg-white text-gray-600 border border-orange-200'}`}>
+                                {s.label}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+
+                      <div>
+                        <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide block mb-1.5">Training constraints</label>
+                        <div className="flex flex-wrap gap-2">
+                          {[
+                            { v: 'no_speed_work', label: 'No speed work' },
+                            { v: 'reduced_distance', label: 'Reduced distance' },
+                            { v: 'no_hills', label: 'No hills' },
+                            { v: 'low_impact_only', label: 'Low impact only' },
+                            { v: 'no_running', label: 'No running' },
+                          ].map(c => {
+                            const active = prefsDraft.injury_constraints.includes(c.v)
+                            return (
+                              <button key={c.v} onClick={() => setPrefsDraft(d => ({ ...d, injury_constraints: active ? d.injury_constraints.filter(x => x !== c.v) : [...d.injury_constraints, c.v] }))}
+                                className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${active ? 'bg-orange-500 text-white' : 'bg-white text-gray-600 border border-orange-200 hover:bg-orange-50'}`}>
+                                {c.label}
+                              </button>
+                            )
+                          })}
+                        </div>
+                      </div>
+
+                      <div>
+                        <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide block mb-1.5">Additional notes <span className="font-normal">(optional)</span></label>
+                        <textarea
+                          value={prefsDraft.injury_notes}
+                          onChange={e => setPrefsDraft(d => ({ ...d, injury_notes: e.target.value }))}
+                          placeholder="e.g. Can bike and swim, avoiding downhill completely, physio cleared me for easy flat runs"
+                          rows={2}
+                          className="w-full text-sm border border-orange-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-orange-400 bg-white resize-none"
+                        />
+                      </div>
+
+                      <p className="text-xs text-orange-600 font-medium">⚠️ This adapts training load only. Always follow your medical professional&apos;s guidance.</p>
+                    </div>
+                  )}
                 </div>
 
                 <div className="flex justify-end gap-2">

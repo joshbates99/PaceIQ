@@ -131,3 +131,10 @@ CREATE TABLE IF NOT EXISTS user_preferences (
 ALTER TABLE user_preferences ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "No anon access to user_preferences"
   ON user_preferences FOR ALL TO anon USING (false);
+
+-- ─── Injury fields on user_preferences ───────────────────────────────────────
+ALTER TABLE user_preferences ADD COLUMN IF NOT EXISTS injury_active     BOOLEAN   NOT NULL DEFAULT false;
+ALTER TABLE user_preferences ADD COLUMN IF NOT EXISTS injury_location   TEXT;
+ALTER TABLE user_preferences ADD COLUMN IF NOT EXISTS severity_level    TEXT;
+ALTER TABLE user_preferences ADD COLUMN IF NOT EXISTS injury_constraints TEXT[]   DEFAULT '{}';
+ALTER TABLE user_preferences ADD COLUMN IF NOT EXISTS injury_notes      TEXT;

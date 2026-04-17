@@ -108,6 +108,37 @@ export async function POST() {
 
   const analyticsSummary = buildAnalyticsSummary(runs)
 
+  const CONSTRAINT_RULES: Record<string, string> = {
+    no_speed_work: 'Remove all intervals and tempo sessions — replace with easy or aerobic cross-training',
+    reduced_distance: 'Cap every run session at 60% of normal planned distance',
+    no_hills: 'All runs must be flat — no hill sessions, no downhill running',
+    low_impact_only: 'Replace all running with low-impact cross-training (cycling, elliptical, swimming)',
+    no_running: 'No running whatsoever — all sessions must be non-running cross-training or mobility',
+  }
+
+  const LOAD_REDUCTION: Record<string, string> = {
+    mild: '80–90% of normal training load — minor modifications only',
+    moderate: '60–70% of normal training load — significant volume reduction',
+    severe: '30–50% of normal training load — non-impact focus only',
+  }
+
+  const injuryText = prefs?.injury_active && prefs.injury_location
+    ? `
+INJURY ADAPTATION REQUIRED:
+- Location: ${prefs.injury_location}
+- Severity: ${prefs.severity_level} → Load target: ${LOAD_REDUCTION[prefs.severity_level ?? 'mild'] ?? '80% load'}
+- Declared constraints:
+${(prefs.injury_constraints ?? []).map((c: string) => `  • ${CONSTRAINT_RULES[c] ?? c}`).join('\n')}
+${prefs.injury_notes ? `- Athlete notes: ${prefs.injury_notes}` : ''}
+
+MANDATORY RULES:
+- Apply every constraint above without exception — do not override
+- Replace running sessions with appropriate cross-training where required
+- Add reasoning to each modified session's Coach's note explaining the substitution
+- Use cautious language — never interpret the injury or suggest diagnosis
+- End each modified session note with: "Always follow your medical professional's guidance"`.trim()
+    : ''
+
   const prefsText = prefs
     ? `
 Athlete training preferences:
@@ -115,7 +146,8 @@ Athlete training preferences:
 - Gym/strength sessions per week: ${prefs.gym_days_per_week}
 - Double days allowed (run + gym/stretch same day): ${prefs.allow_double_days ? 'Yes' : 'No'}
 - Experience level: ${prefs.experience_level}
-${prefs.notes ? `- Additional notes: ${prefs.notes}` : ''}`.trim()
+${prefs.notes ? `- Additional notes: ${prefs.notes}` : ''}
+${injuryText}`.trim()
     : 'Athlete training preferences: Not set — use sensible defaults (5 runs/week, 1 strength session, no double days).'
 
   // ── Claude API call with prompt caching ──────────────────────────────────────
