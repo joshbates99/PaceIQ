@@ -29,15 +29,24 @@ function buildContext(runs: Activity[]) {
   const formatPace = (mpk: number) => `${Math.floor(mpk)}:${Math.round((mpk % 1) * 60).toString().padStart(2, '0')}/km`
 
   const pbs = [
-    { label: '5K', min: 4500, max: 5500 },
-    { label: '10K', min: 9000, max: 11000 },
-    { label: 'Half Marathon', min: 19000, max: 22200 },
-    { label: 'Marathon', min: 40000, max: 44000 },
+    { label: '5K', target: 5000, min: 5000 },
+    { label: '10K', target: 10000, min: 10000 },
+    { label: 'Half Marathon', target: 21097, min: 21097 },
+    { label: 'Marathon', target: 42195, min: 42195 },
   ].flatMap(t => {
-    const c = runs.filter(a => a.distance >= t.min && a.distance <= t.max)
+    const c = runs.filter(a => a.distance >= t.min)
     if (!c.length) return []
-    const best = c.reduce((b, a) => a.average_speed > b.average_speed ? a : b)
-    return [`${t.label}: ${formatPace(1000 / (best.average_speed * 60))}`]
+    const best = c.reduce((b, a) => {
+      const aTime = (t.target / a.distance) * a.moving_time
+      const bTime = (t.target / b.distance) * b.moving_time
+      return aTime < bTime ? a : b
+    })
+    const secs = Math.round((t.target / best.distance) * best.moving_time)
+    const h = Math.floor(secs / 3600)
+    const m = Math.floor((secs % 3600) / 60)
+    const s = secs % 60
+    const timeStr = h > 0 ? `${h}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}` : `${m}:${s.toString().padStart(2, '0')}`
+    return [`${t.label}: ${timeStr}`]
   })
 
   return `

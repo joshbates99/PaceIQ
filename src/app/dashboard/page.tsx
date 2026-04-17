@@ -20,11 +20,19 @@ function formatDate(d: string) {
 // ── Personal bests (fetched from analytics) ───────────────────────────────────
 
 const PB_DISTANCES = [
-  { label: '5K', min: 4500, max: 5500 },
-  { label: '10K', min: 9000, max: 11000 },
-  { label: 'Half Marathon', min: 19000, max: 22200 },
-  { label: 'Marathon', min: 40000, max: 44000 },
+  { label: '5K', target: 5000, min: 5000 },
+  { label: '10K', target: 10000, min: 10000 },
+  { label: 'Half Marathon', target: 21097, min: 21097 },
+  { label: 'Marathon', target: 42195, min: 42195 },
 ]
+
+function formatFinishTime(seconds: number): string {
+  const h = Math.floor(seconds / 3600)
+  const m = Math.floor((seconds % 3600) / 60)
+  const s = Math.round(seconds % 60)
+  if (h > 0) return `${h}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`
+  return `${m}:${s.toString().padStart(2, '0')}`
+}
 
 // ── Insight renderer ──────────────────────────────────────────────────────────
 
@@ -85,7 +93,7 @@ export default function Dashboard() {
   const { data: session, status } = useSession()
   const [goals, setGoals] = useState<Goal[]>([])
   const [races, setRaces] = useState<Race[]>([])
-  const [pbs, setPbs] = useState<{ label: string; pace: string; date: string }[]>([])
+  const [pbs, setPbs] = useState<{ label: string; time: string; date: string }[]>([])
   const [insight, setInsight] = useState<string | null>(null)
   const [insightDate, setInsightDate] = useState<string | null>(null)
   const [remainingToday, setRemainingToday] = useState(3)
@@ -125,13 +133,18 @@ export default function Dashboard() {
     setLoading(false)
   }
 
-  function computePBs(activities: { distance: number; average_speed: number; start_date: string }[]) {
+  function computePBs(activities: { distance: number; average_speed: number; moving_time: number; start_date: string }[]) {
     const results = PB_DISTANCES.flatMap(t => {
-      const candidates = activities.filter(a => a.distance >= t.min && a.distance <= t.max)
+      const candidates = activities.filter(a => a.distance >= t.min)
       if (!candidates.length) return []
-      const best = candidates.reduce((b, a) => a.average_speed > b.average_speed ? a : b)
-      const mpk = 1000 / (best.average_speed * 60)
-      return [{ label: t.label, pace: `${Math.floor(mpk)}:${Math.round((mpk % 1) * 60).toString().padStart(2, '0')}/km`, date: formatDate(best.start_date) }]
+      // Estimate split time at target distance assuming constant pace
+      const best = candidates.reduce((b, a) => {
+        const aTime = (t.target / a.distance) * a.moving_time
+        const bTime = (t.target / b.distance) * b.moving_time
+        return aTime < bTime ? a : b
+      })
+      const estimatedSecs = (t.target / best.distance) * best.moving_time
+      return [{ label: t.label, time: formatFinishTime(estimatedSecs), date: formatDate(best.start_date) }]
     })
     setPbs(results)
   }
@@ -313,7 +326,7 @@ export default function Dashboard() {
                   ) : pbs.map((pb, i) => (
                     <div key={i} className="px-5 py-3.5">
                       <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">{pb.label}</p>
-                      <p className="text-lg font-bold text-[#1A56DB] mt-0.5">{pb.pace}</p>
+                      <p className="text-lg font-bold text-[#1A56DB] mt-0.5">{pb.time}</p>
                       <p className="text-xs text-gray-400">{pb.date}</p>
                     </div>
                   ))}

@@ -9,7 +9,7 @@ export async function GET() {
 
   const { data, error } = await supabaseAdmin
     .from('activities')
-    .select('distance, average_speed, start_date')
+    .select('distance, average_speed, moving_time, start_date')
     .eq('user_id', session.user.id)
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
