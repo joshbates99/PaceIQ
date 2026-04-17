@@ -35,6 +35,34 @@ CREATE TABLE IF NOT EXISTS activities (
   created_at            TIMESTAMPTZ DEFAULT NOW()
 );
 
+-- ─── Goals ───────────────────────────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS goals (
+  id           UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id      UUID        NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  title        TEXT        NOT NULL,
+  target_date  DATE,
+  created_at   TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- ─── Races ───────────────────────────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS races (
+  id           UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id      UUID        NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  name         TEXT        NOT NULL,
+  distance_km  NUMERIC     NOT NULL,
+  date         DATE        NOT NULL,
+  target_time  TEXT,
+  created_at   TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- ─── Goal Insights ────────────────────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS goal_insights (
+  id           UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id      UUID        NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  insight      TEXT        NOT NULL,
+  generated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
 -- ─── Training Plans ──────────────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS training_plans (
   id           UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -68,6 +96,15 @@ ALTER TABLE training_plans ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY "No anon access to training_plans"
   ON training_plans FOR ALL TO anon USING (false);
+
+ALTER TABLE goals ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "No anon access to goals" ON goals FOR ALL TO anon USING (false);
+
+ALTER TABLE races ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "No anon access to races" ON races FOR ALL TO anon USING (false);
+
+ALTER TABLE goal_insights ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "No anon access to goal_insights" ON goal_insights FOR ALL TO anon USING (false);
 
 -- Allow authenticated Supabase Auth users to read only their own rows
 -- (future-proof if you add Supabase Auth later)
