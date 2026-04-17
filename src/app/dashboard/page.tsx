@@ -134,18 +134,30 @@ export default function Dashboard() {
     setLoading(false)
   }
 
-  function computePBs(activities: { distance: number; average_speed: number; moving_time: number; start_date: string }[]) {
+  function computePBs(activities: { distance: number; average_speed: number; moving_time: number; start_date: string; best_efforts: { name: string; elapsed_time: number }[] | null }[]) {
+    const EFFORT_NAMES: Record<string, string> = { '5K': '5k', '10K': '10k', 'Half Marathon': 'half marathon', 'Marathon': 'marathon' }
     const results = PB_DISTANCES.flatMap(t => {
+      const effortKey = EFFORT_NAMES[t.label]
+      // Prefer Strava's exact best_effort split times
+      const effortTimes = activities.flatMap(a =>
+        (a.best_efforts ?? [])
+          .filter(e => e.name === effortKey)
+          .map(e => ({ secs: e.elapsed_time, date: a.start_date }))
+      )
+      if (effortTimes.length > 0) {
+        const best = effortTimes.reduce((b, a) => a.secs < b.secs ? a : b)
+        return [{ label: t.label, time: formatFinishTime(best.secs), date: formatDate(best.date) }]
+      }
+      // Fallback: proportional estimation for runs at least as long as the target
       const candidates = activities.filter(a => a.distance >= t.min)
       if (!candidates.length) return []
-      // Estimate split time at target distance assuming constant pace
       const best = candidates.reduce((b, a) => {
         const aTime = (t.target / a.distance) * a.moving_time
         const bTime = (t.target / b.distance) * b.moving_time
         return aTime < bTime ? a : b
       })
       const estimatedSecs = (t.target / best.distance) * best.moving_time
-      return [{ label: t.label, time: formatFinishTime(estimatedSecs), date: formatDate(best.start_date) }]
+      return [{ label: t.label, time: `~${formatFinishTime(estimatedSecs)}`, date: formatDate(best.start_date) }]
     })
     setPbs(results)
   }

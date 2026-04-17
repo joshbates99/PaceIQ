@@ -63,7 +63,41 @@ export async function POST() {
 
     if (error) throw new Error(error.message)
 
-    return NextResponse.json({ synced: rows.length })
+    // Fetch best_efforts for activities that don't have them yet
+    const { data: missing } = await supabaseAdmin
+      .from('activities')
+      .select('id, strava_id')
+      .eq('user_id', userId)
+      .is('best_efforts', null)
+
+    if (missing && missing.length > 0) {
+      // Fetch in batches of 20 to stay within Strava rate limits
+      const BATCH = 20
+      for (let i = 0; i < missing.length; i += BATCH) {
+        const batch = missing.slice(i, i + BATCH)
+        await Promise.all(batch.map(async (row) => {
+          try {
+            const detailRes = await fetch(
+              `https://www.strava.com/api/v3/activities/${row.strava_id}`,
+              { headers: { Authorization: `Bearer ${accessToken}` } }
+            )
+            if (!detailRes.ok) return
+            const detail = await detailRes.json()
+            const best_efforts = (detail.best_efforts ?? []).map((e: { name: string; elapsed_time: number; distance: number }) => ({
+              name: e.name.toLowerCase(),
+              elapsed_time: e.elapsed_time,
+              distance: e.distance,
+            }))
+            await supabaseAdmin
+              .from('activities')
+              .update({ best_efforts })
+              .eq('id', row.id)
+          } catch { /* skip on error */ }
+        }))
+      }
+    }
+
+    return NextResponse.json({ synced: rows.length, detailed: missing?.length ?? 0 })
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : 'Unknown error'
     console.error('[/api/sync]', message)

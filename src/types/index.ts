@@ -11,6 +11,12 @@ export interface DbUser {
   updated_at: string
 }
 
+export interface BestEffort {
+  name: string        // '5k', '10k', 'half marathon', 'marathon' etc.
+  elapsed_time: number // seconds
+  distance: number
+}
+
 export interface Activity {
   id: string
   user_id: string
@@ -27,6 +33,7 @@ export interface Activity {
   total_elevation_gain: number
   average_cadence: number | null
   summary_polyline: string | null
+  best_efforts: BestEffort[] | null
 }
 
 export interface StravaActivity {

@@ -28,12 +28,26 @@ function buildContext(runs: Activity[]) {
   const avgPace = avgSpeed ? 1000 / (avgSpeed * 60) : null
   const formatPace = (mpk: number) => `${Math.floor(mpk)}:${Math.round((mpk % 1) * 60).toString().padStart(2, '0')}/km`
 
+  const formatTime = (secs: number) => {
+    const h = Math.floor(secs / 3600), m = Math.floor((secs % 3600) / 60), s = secs % 60
+    return h > 0 ? `${h}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}` : `${m}:${s.toString().padStart(2, '0')}`
+  }
+  const EFFORT_NAMES: Record<string, string> = { '5K': '5k', '10K': '10k', 'Half Marathon': 'half marathon', 'Marathon': 'marathon' }
   const pbs = [
     { label: '5K', target: 5000, min: 4800 },
     { label: '10K', target: 10000, min: 9700 },
     { label: 'Half Marathon', target: 21097, min: 20500 },
     { label: 'Marathon', target: 42195, min: 41000 },
   ].flatMap(t => {
+    const effortKey = EFFORT_NAMES[t.label]
+    const effortTimes = runs.flatMap(a =>
+      ((a as unknown as { best_efforts?: { name: string; elapsed_time: number }[] }).best_efforts ?? [])
+        .filter((e) => e.name === effortKey)
+        .map((e) => e.elapsed_time)
+    )
+    if (effortTimes.length > 0) {
+      return [`${t.label}: ${formatTime(Math.min(...effortTimes))}`]
+    }
     const c = runs.filter(a => a.distance >= t.min)
     if (!c.length) return []
     const best = c.reduce((b, a) => {
@@ -41,12 +55,7 @@ function buildContext(runs: Activity[]) {
       const bTime = (t.target / b.distance) * b.moving_time
       return aTime < bTime ? a : b
     })
-    const secs = Math.round((t.target / best.distance) * best.moving_time)
-    const h = Math.floor(secs / 3600)
-    const m = Math.floor((secs % 3600) / 60)
-    const s = secs % 60
-    const timeStr = h > 0 ? `${h}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}` : `${m}:${s.toString().padStart(2, '0')}`
-    return [`${t.label}: ${timeStr}`]
+    return [`${t.label}: ~${formatTime(Math.round((t.target / best.distance) * best.moving_time))}`]
   })
 
   return `
