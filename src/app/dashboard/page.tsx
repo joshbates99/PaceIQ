@@ -192,7 +192,7 @@ export default function Dashboard() {
     return (
       <div className="flex min-h-screen bg-gray-50">
         <Sidebar user={{}} />
-        <main className="flex-1 pl-64 flex items-center justify-center">
+        <main className="flex-1 lg:pl-64 flex items-center justify-center">
           <div className="text-gray-400 text-sm">Loading...</div>
         </main>
       </div>
@@ -204,8 +204,8 @@ export default function Dashboard() {
   return (
     <div className="flex min-h-screen bg-gray-50">
       <Sidebar user={session?.user ?? {}} />
-      <main className="flex-1 pl-64">
-        <div className="max-w-5xl mx-auto px-8 py-8 space-y-6">
+      <main className="flex-1 lg:pl-64">
+        <div className="max-w-5xl mx-auto px-4 sm:px-8 pt-20 lg:pt-8 pb-24 lg:pb-8 space-y-6">
 
           {/* Header */}
           <div className="flex items-center gap-4">
@@ -218,7 +218,7 @@ export default function Dashboard() {
             </div>
           </div>
 
-          <div className="grid grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
             {/* ── Left column: Goals + Races ── */}
             <div className="col-span-2 space-y-6">

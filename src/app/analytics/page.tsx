@@ -166,8 +166,8 @@ export default async function Analytics() {
     <div className="flex min-h-screen bg-gray-50">
       <Sidebar user={session.user} />
 
-      <main className="flex-1 pl-64">
-        <div className="max-w-5xl mx-auto px-8 py-8 space-y-6">
+      <main className="flex-1 lg:pl-64">
+        <div className="max-w-5xl mx-auto px-4 sm:px-8 pt-20 lg:pt-8 pb-24 lg:pb-8 space-y-6">
 
           {/* Header */}
           <div>
@@ -177,7 +177,7 @@ export default async function Analytics() {
 
           {/* Training Load */}
           <Section title="Training Load" subtitle="Premium Strava metric — free here">
-            <div className="grid grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <LoadCard
                 label="Fitness (CTL)"
                 value={load.ctl}
@@ -265,7 +265,7 @@ export default async function Analytics() {
             )}
           </Section>
 
-          <div className="grid grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {/* HR Zones */}
             <Section title="Heart Rate Zones" subtitle="Distribution across all runs">
               {!zones ? (

@@ -211,7 +211,7 @@ export default function TrainingPlan() {
     return (
       <div className="flex min-h-screen bg-gray-50">
         <Sidebar user={{}} />
-        <main className="flex-1 pl-64 flex items-center justify-center">
+        <main className="flex-1 lg:pl-64 flex items-center justify-center">
           <div className="text-gray-400 text-sm">Loading...</div>
         </main>
       </div>
@@ -225,11 +225,11 @@ export default function TrainingPlan() {
     <div className="flex min-h-screen bg-gray-50">
       <Sidebar user={session?.user ?? {}} />
 
-      <main className="flex-1 pl-64">
-        <div className="max-w-3xl mx-auto px-8 py-8 space-y-5" ref={topRef}>
+      <main className="flex-1 lg:pl-64">
+        <div className="max-w-3xl mx-auto px-4 sm:px-8 pt-20 lg:pt-8 pb-24 lg:pb-8 space-y-5" ref={topRef}>
 
           {/* Header */}
-          <div className="flex items-start justify-between">
+          <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
             <div>
               <h1 className="text-2xl font-bold text-gray-900">Training Plan</h1>
               <p className="text-gray-500 text-sm mt-0.5">AI-personalised plan with session details and nutrition</p>

@@ -48,8 +48,8 @@ export default async function ActivityLog() {
   return (
     <div className="flex min-h-screen bg-gray-50">
       <Sidebar user={session.user} />
-      <main className="flex-1 pl-64">
-        <div className="max-w-5xl mx-auto px-8 py-8">
+      <main className="flex-1 lg:pl-64">
+        <div className="max-w-5xl mx-auto px-4 sm:px-8 pt-20 lg:pt-8 pb-24 lg:pb-8">
 
           <div className="flex items-center justify-between mb-8">
             <div>
@@ -59,7 +59,7 @@ export default async function ActivityLog() {
             <SyncButton />
           </div>
 
-          <div className="grid grid-cols-3 gap-5 mb-8">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-5 mb-8">
             <StatCard label="Total Runs" value={totalRuns.toLocaleString()} />
             <StatCard label="Total Distance" value={`${totalKm.toFixed(1)} km`} />
             <StatCard label="Longest Run" value={`${longestKm.toFixed(2)} km`} />
@@ -78,7 +78,7 @@ export default async function ActivityLog() {
               </div>
             ) : (
               <>
-                <div className="grid grid-cols-[80px_1fr_100px_100px_100px] px-6 py-3 bg-gray-50 border-b border-gray-100">
+                <div className="hidden sm:grid grid-cols-[80px_1fr_100px_100px_100px] px-6 py-3 bg-gray-50 border-b border-gray-100">
                   <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">Route</span>
                   <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">Activity</span>
                   <span className="text-xs font-medium text-gray-500 uppercase tracking-wide text-right">Distance</span>
@@ -87,25 +87,45 @@ export default async function ActivityLog() {
                 </div>
                 <div className="divide-y divide-gray-50">
                   {(runs as Activity[]).map((run) => (
-                    <div key={run.id} className="grid grid-cols-[80px_1fr_100px_100px_100px] items-center px-6 py-3 hover:bg-gray-50/70 transition-colors">
-                      <div className="pr-3">
-                        {run.summary_polyline ? (
-                          <RouteMap polyline={run.summary_polyline} width={64} height={52} />
-                        ) : (
-                          <div className="w-16 rounded-lg bg-gray-100 h-12 flex items-center justify-center">
-                            <svg className="w-4 h-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
-                            </svg>
+                    <div key={run.id} className="px-4 sm:px-6 py-3 hover:bg-gray-50/70 transition-colors">
+                      {/* Mobile layout */}
+                      <div className="flex items-center justify-between sm:hidden">
+                        <div className="min-w-0">
+                          <p className="font-medium text-gray-900 text-sm truncate">{run.name}</p>
+                          <p className="text-xs text-gray-400 mt-0.5">{formatDate(run.start_date)}</p>
+                          <div className="flex gap-3 mt-1">
+                            <span className="text-xs font-semibold text-gray-700">{(run.distance / 1000).toFixed(2)} km</span>
+                            <span className="text-xs text-gray-500">{formatPace(run.average_speed)}</span>
+                            <span className="text-xs text-gray-500">{formatDuration(run.moving_time)}</span>
+                          </div>
+                        </div>
+                        {run.summary_polyline && (
+                          <div className="ml-3 flex-shrink-0">
+                            <RouteMap polyline={run.summary_polyline} width={56} height={44} />
                           </div>
                         )}
                       </div>
-                      <div>
-                        <p className="font-medium text-gray-900 text-sm truncate pr-4">{run.name}</p>
-                        <p className="text-xs text-gray-400 mt-0.5">{formatDate(run.start_date)}</p>
+                      {/* Desktop layout */}
+                      <div className="hidden sm:grid grid-cols-[80px_1fr_100px_100px_100px] items-center">
+                        <div className="pr-3">
+                          {run.summary_polyline ? (
+                            <RouteMap polyline={run.summary_polyline} width={64} height={52} />
+                          ) : (
+                            <div className="w-16 rounded-lg bg-gray-100 h-12 flex items-center justify-center">
+                              <svg className="w-4 h-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
+                              </svg>
+                            </div>
+                          )}
+                        </div>
+                        <div>
+                          <p className="font-medium text-gray-900 text-sm truncate pr-4">{run.name}</p>
+                          <p className="text-xs text-gray-400 mt-0.5">{formatDate(run.start_date)}</p>
+                        </div>
+                        <p className="text-sm font-semibold text-gray-900 text-right">{(run.distance / 1000).toFixed(2)} km</p>
+                        <p className="text-sm font-semibold text-gray-900 text-right">{formatPace(run.average_speed)}</p>
+                        <p className="text-sm font-semibold text-gray-900 text-right">{formatDuration(run.moving_time)}</p>
                       </div>
-                      <p className="text-sm font-semibold text-gray-900 text-right">{(run.distance / 1000).toFixed(2)} km</p>
-                      <p className="text-sm font-semibold text-gray-900 text-right">{formatPace(run.average_speed)}</p>
-                      <p className="text-sm font-semibold text-gray-900 text-right">{formatDuration(run.moving_time)}</p>
                     </div>
                   ))}
                 </div>
