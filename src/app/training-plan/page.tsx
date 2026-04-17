@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react'
 import Sidebar from '@/components/Sidebar'
+import MainContent from '@/components/MainContent'
 import { useSession } from 'next-auth/react'
 import { redirect } from 'next/navigation'
 
@@ -211,9 +212,11 @@ export default function TrainingPlan() {
     return (
       <div className="flex min-h-screen bg-gray-50">
         <Sidebar user={{}} />
-        <main className="flex-1 lg:pl-64 flex items-center justify-center">
-          <div className="text-gray-400 text-sm">Loading...</div>
-        </main>
+        <MainContent>
+          <div className="flex items-center justify-center py-32">
+            <div className="text-gray-400 text-sm">Loading...</div>
+          </div>
+        </MainContent>
       </div>
     )
   }
@@ -225,7 +228,7 @@ export default function TrainingPlan() {
     <div className="flex min-h-screen bg-gray-50">
       <Sidebar user={session?.user ?? {}} />
 
-      <main className="flex-1 lg:pl-64">
+      <MainContent>
         <div className="max-w-3xl mx-auto px-4 sm:px-8 pt-20 lg:pt-8 pb-24 lg:pb-8 space-y-5" ref={topRef}>
 
           {/* Header */}
@@ -314,7 +317,7 @@ export default function TrainingPlan() {
           </p>
 
         </div>
-      </main>
+      </MainContent>
     </div>
   )
 }

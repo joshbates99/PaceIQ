@@ -5,6 +5,7 @@ import { useSession } from 'next-auth/react'
 import { redirect } from 'next/navigation'
 import Image from 'next/image'
 import Sidebar from '@/components/Sidebar'
+import MainContent from '@/components/MainContent'
 
 interface Goal { id: string; title: string; target_date: string | null }
 interface Race { id: string; name: string; distance_km: number; date: string; target_time: string | null }
@@ -192,9 +193,11 @@ export default function Dashboard() {
     return (
       <div className="flex min-h-screen bg-gray-50">
         <Sidebar user={{}} />
-        <main className="flex-1 lg:pl-64 flex items-center justify-center">
-          <div className="text-gray-400 text-sm">Loading...</div>
-        </main>
+        <MainContent>
+          <div className="flex items-center justify-center h-full py-32">
+            <div className="text-gray-400 text-sm">Loading...</div>
+          </div>
+        </MainContent>
       </div>
     )
   }
@@ -204,7 +207,7 @@ export default function Dashboard() {
   return (
     <div className="flex min-h-screen bg-gray-50">
       <Sidebar user={session?.user ?? {}} />
-      <main className="flex-1 lg:pl-64">
+      <MainContent>
         <div className="max-w-5xl mx-auto px-4 sm:px-8 pt-20 lg:pt-8 pb-24 lg:pb-8 space-y-6">
 
           {/* Header */}
@@ -375,7 +378,7 @@ export default function Dashboard() {
           </div>
 
         </div>
-      </main>
+      </MainContent>
     </div>
   )
 }

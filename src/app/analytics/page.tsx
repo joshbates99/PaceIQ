@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation'
 import { authOptions } from '../api/auth/[...nextauth]/route'
 import { supabaseAdmin } from '@/lib/supabase'
 import Sidebar from '@/components/Sidebar'
+import MainContent from '@/components/MainContent'
 import { Activity } from '@/types'
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -166,7 +167,7 @@ export default async function Analytics() {
     <div className="flex min-h-screen bg-gray-50">
       <Sidebar user={session.user} />
 
-      <main className="flex-1 lg:pl-64">
+      <MainContent>
         <div className="max-w-5xl mx-auto px-4 sm:px-8 pt-20 lg:pt-8 pb-24 lg:pb-8 space-y-6">
 
           {/* Header */}
@@ -336,7 +337,7 @@ export default async function Analytics() {
           </div>
 
         </div>
-      </main>
+      </MainContent>
     </div>
   )
 }
