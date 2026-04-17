@@ -115,3 +115,19 @@ CREATE POLICY "Authenticated users see own user row"
 CREATE POLICY "Authenticated users see own activities"
   ON activities FOR SELECT TO authenticated
   USING (user_id = auth.uid());
+
+-- ─── User Preferences ─────────────────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS user_preferences (
+  id                  UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id             UUID        REFERENCES users(id) ON DELETE CASCADE NOT NULL UNIQUE,
+  runs_per_week       INT         NOT NULL DEFAULT 5,
+  gym_days_per_week   INT         NOT NULL DEFAULT 0,
+  allow_double_days   BOOLEAN     NOT NULL DEFAULT false,
+  experience_level    TEXT        NOT NULL DEFAULT 'intermediate',
+  notes               TEXT,
+  updated_at          TIMESTAMPTZ DEFAULT now()
+);
+
+ALTER TABLE user_preferences ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "No anon access to user_preferences"
+  ON user_preferences FOR ALL TO anon USING (false);

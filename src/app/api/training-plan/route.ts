@@ -91,12 +91,11 @@ export async function POST() {
     )
   }
 
-  // ── Fetch activities ─────────────────────────────────────────────────────────
-  const { data: activities } = await supabaseAdmin
-    .from('activities')
-    .select('*')
-    .eq('user_id', userId)
-    .order('start_date', { ascending: false })
+  // ── Fetch activities + preferences ───────────────────────────────────────────
+  const [{ data: activities }, { data: prefs }] = await Promise.all([
+    supabaseAdmin.from('activities').select('*').eq('user_id', userId).order('start_date', { ascending: false }),
+    supabaseAdmin.from('user_preferences').select('*').eq('user_id', userId).single(),
+  ])
 
   const runs = (activities ?? []) as Activity[]
 
@@ -108,6 +107,16 @@ export async function POST() {
   }
 
   const analyticsSummary = buildAnalyticsSummary(runs)
+
+  const prefsText = prefs
+    ? `
+Athlete training preferences:
+- Runs per week: ${prefs.runs_per_week}
+- Gym/strength sessions per week: ${prefs.gym_days_per_week}
+- Double days allowed (run + gym/stretch same day): ${prefs.allow_double_days ? 'Yes' : 'No'}
+- Experience level: ${prefs.experience_level}
+${prefs.notes ? `- Additional notes: ${prefs.notes}` : ''}`.trim()
+    : 'Athlete training preferences: Not set — use sensible defaults (5 runs/week, 1 strength session, no double days).'
 
   // ── Claude API call with prompt caching ──────────────────────────────────────
   // Build the next 7 days with real dates (Mon–Sun starting from upcoming Monday)
@@ -135,24 +144,29 @@ export async function POST() {
       {
         type: 'text',
         text: `You are an expert running coach with deep knowledge of exercise physiology, periodisation, and injury prevention.
-You generate personalised 7-day training plans based on a runner's analytics data.
+You generate personalised 7-day training plans based on a runner's analytics data AND their stated preferences.
 
-Session types to distribute across the week (5 run types + mobility):
+Session types available:
 1. Easy Run — conversational pace, aerobic base building
 2. Recovery Run — very easy, short, after hard sessions
 3. Long Run — slowest pace, builds endurance
 4. Tempo Run — comfortably hard, sustained effort (20–40 min at tempo)
 5. Intervals — structured speed work e.g. 6×800m or 8×400m with rest
-6. Stretching & Mobility — dedicated session with specific exercises listed
+6. Strength & Gym — gym-based strength session with specific exercises relevant to running
+7. Stretching & Mobility — dedicated session with specific exercises listed
+8. Rest — full rest day
 
 Weekly structure rules:
+- CRITICAL: Respect the athlete's stated runs_per_week exactly — do not add or remove run days
+- CRITICAL: If gym_days_per_week > 0, include exactly that many gym/strength sessions
+- CRITICAL: If allow_double_days is Yes, you may schedule run + stretch or run + gym on the same day — format as two sessions clearly
+- CRITICAL: If allow_double_days is No, each day has at most one session
 - Never place two hard sessions (tempo/intervals) back to back
 - Always follow a hard session with an easy, recovery, or mobility day
-- If TSB < -10 (fatigued): drop intervals entirely, replace with easy/recovery, add extra mobility — clearly explain why
+- If TSB < -10 (fatigued): drop intervals, replace with easy/recovery, add extra mobility
 - If TSB > 10 (fresh): include both a tempo and an interval session
-- Always include exactly one long run on Saturday or Sunday
-- Always include at least one dedicated stretching & mobility session
-- Include rest days where appropriate
+- Always include exactly one long run (Saturday or Sunday preferred)
+- Fill remaining days with rest as needed to match the stated run count
 
 Format for each day (use this exact structure with these exact labels):
 **[Day and Date]**
@@ -181,7 +195,7 @@ Rules:
     messages: [
       {
         role: 'user',
-        content: `Here is my current running analytics data:\n\n${analyticsSummary}\n\nThe week to plan is:\n${weekDates}\n\nPlease generate my personalised training plan for this week.`,
+        content: `Here is my current running analytics data:\n\n${analyticsSummary}\n\n${prefsText}\n\nThe week to plan is:\n${weekDates}\n\nPlease generate my personalised training plan for this week, strictly following my preferences above.`,
       },
     ],
   })

@@ -13,6 +13,14 @@ interface PlanState {
   dailyLimit: number
 }
 
+interface Preferences {
+  runs_per_week: number
+  gym_days_per_week: number
+  allow_double_days: boolean
+  experience_level: string
+  notes: string
+}
+
 interface DayPlan {
   heading: string
   sessionType: string
@@ -166,6 +174,8 @@ function WeekStrip({ days }: { days: DayPlan[] }) {
 
 // ── Page ──────────────────────────────────────────────────────────────────────
 
+const DEFAULT_PREFS: Preferences = { runs_per_week: 5, gym_days_per_week: 0, allow_double_days: false, experience_level: 'intermediate', notes: '' }
+
 export default function TrainingPlan() {
   const { data: session, status } = useSession()
   const [state, setState] = useState<PlanState | null>(null)
@@ -174,17 +184,39 @@ export default function TrainingPlan() {
   const [error, setError] = useState<string | null>(null)
   const topRef = useRef<HTMLDivElement>(null)
 
+  const [prefs, setPrefs] = useState<Preferences>(DEFAULT_PREFS)
+  const [prefsSet, setPrefsSet] = useState(false)
+  const [prefsOpen, setPrefsOpen] = useState(false)
+  const [prefsSaving, setPrefsSaving] = useState(false)
+  const [prefsDraft, setPrefsDraft] = useState<Preferences>(DEFAULT_PREFS)
+
   useEffect(() => {
     if (status === 'unauthenticated') redirect('/')
-    if (status === 'authenticated') fetchLatest()
+    if (status === 'authenticated') loadAll()
   }, [status])
 
-  async function fetchLatest() {
+  async function loadAll() {
     setLoading(true)
-    const res = await fetch('/api/training-plan')
-    const data = await res.json()
-    setState(data)
+    const [planRes, prefsRes] = await Promise.all([fetch('/api/training-plan'), fetch('/api/preferences')])
+    const planData = await planRes.json()
+    const prefsData = await prefsRes.json()
+    setState(planData)
+    if (prefsData && prefsData.runs_per_week != null) {
+      const p = { runs_per_week: prefsData.runs_per_week, gym_days_per_week: prefsData.gym_days_per_week ?? 0, allow_double_days: prefsData.allow_double_days ?? false, experience_level: prefsData.experience_level ?? 'intermediate', notes: prefsData.notes ?? '' }
+      setPrefs(p)
+      setPrefsDraft(p)
+      setPrefsSet(true)
+    } else {
+      setPrefsOpen(true)
+    }
     setLoading(false)
+  }
+
+  async function savePrefs() {
+    setPrefsSaving(true)
+    const res = await fetch('/api/preferences', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(prefsDraft) })
+    if (res.ok) { setPrefs(prefsDraft); setPrefsSet(true); setPrefsOpen(false) }
+    setPrefsSaving(false)
   }
 
   async function generatePlan() {
@@ -237,10 +269,10 @@ export default function TrainingPlan() {
               <h1 className="text-2xl font-bold text-gray-900">Training Plan</h1>
               <p className="text-gray-500 text-sm mt-0.5">AI-personalised plan with session details and nutrition</p>
             </div>
-            <div className="text-right flex flex-col items-end gap-1.5">
+            <div className="flex flex-col items-start sm:items-end gap-1.5">
               <button
                 onClick={generatePlan}
-                disabled={generating || !canGenerate}
+                disabled={generating || !canGenerate || !prefsSet}
                 className="px-5 py-2.5 bg-[#1A56DB] text-white text-sm font-semibold rounded-xl hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors shadow-sm"
               >
                 {generating ? 'Generating…' : state?.plan ? 'Regenerate' : 'Generate Plan'}
@@ -249,6 +281,99 @@ export default function TrainingPlan() {
                 {state?.remainingToday ?? 0}/{state?.dailyLimit ?? 3} left today
               </p>
             </div>
+          </div>
+
+          {/* ── Training Preferences ── */}
+          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+            <button
+              onClick={() => { setPrefsOpen(v => !v); setPrefsDraft(prefs) }}
+              className="w-full px-6 py-4 flex items-center justify-between hover:bg-gray-50 transition-colors"
+            >
+              <div className="flex items-center gap-3">
+                <span className="text-sm font-bold text-gray-900">⚙️ Training Preferences</span>
+                {prefsSet && (
+                  <span className="text-xs text-gray-400">
+                    {prefs.runs_per_week} runs · {prefs.gym_days_per_week} gym · {prefs.experience_level}
+                  </span>
+                )}
+                {!prefsSet && <span className="text-xs font-semibold text-orange-500">Set before generating</span>}
+              </div>
+              <svg className={`w-4 h-4 text-gray-400 transition-transform ${prefsOpen ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+              </svg>
+            </button>
+
+            {prefsOpen && (
+              <div className="px-6 pb-6 border-t border-gray-100 pt-4 space-y-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide block mb-1.5">Run days per week</label>
+                    <div className="flex gap-2 flex-wrap">
+                      {[1,2,3,4,5,6,7].map(n => (
+                        <button key={n} onClick={() => setPrefsDraft(d => ({ ...d, runs_per_week: n }))}
+                          className={`w-9 h-9 rounded-lg text-sm font-bold transition-colors ${prefsDraft.runs_per_week === n ? 'bg-[#1A56DB] text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>
+                          {n}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  <div>
+                    <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide block mb-1.5">Gym/strength days per week</label>
+                    <div className="flex gap-2 flex-wrap">
+                      {[0,1,2,3,4,5].map(n => (
+                        <button key={n} onClick={() => setPrefsDraft(d => ({ ...d, gym_days_per_week: n }))}
+                          className={`w-9 h-9 rounded-lg text-sm font-bold transition-colors ${prefsDraft.gym_days_per_week === n ? 'bg-[#1A56DB] text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>
+                          {n}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide block mb-1.5">Experience level</label>
+                    <div className="flex gap-2">
+                      {['beginner','intermediate','advanced'].map(l => (
+                        <button key={l} onClick={() => setPrefsDraft(d => ({ ...d, experience_level: l }))}
+                          className={`px-3 py-1.5 rounded-lg text-xs font-semibold capitalize transition-colors ${prefsDraft.experience_level === l ? 'bg-[#1A56DB] text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>
+                          {l}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <button onClick={() => setPrefsDraft(d => ({ ...d, allow_double_days: !d.allow_double_days }))}
+                      className={`relative w-10 h-6 rounded-full transition-colors flex-shrink-0 ${prefsDraft.allow_double_days ? 'bg-[#1A56DB]' : 'bg-gray-200'}`}>
+                      <span className={`absolute top-1 w-4 h-4 bg-white rounded-full shadow transition-transform ${prefsDraft.allow_double_days ? 'translate-x-5' : 'translate-x-1'}`} />
+                    </button>
+                    <div>
+                      <p className="text-xs font-semibold text-gray-700">Double days</p>
+                      <p className="text-xs text-gray-400">Run + gym/stretch same day</p>
+                    </div>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide block mb-1.5">Additional notes <span className="font-normal">(optional)</span></label>
+                  <textarea
+                    value={prefsDraft.notes}
+                    onChange={e => setPrefsDraft(d => ({ ...d, notes: e.target.value }))}
+                    placeholder="e.g. I swim on Tuesdays, prefer long run on Sunday, no back-to-back hard days"
+                    rows={2}
+                    className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+                  />
+                </div>
+
+                <div className="flex justify-end gap-2">
+                  <button onClick={() => setPrefsOpen(false)} className="px-4 py-2 text-sm text-gray-500 hover:text-gray-700">Cancel</button>
+                  <button onClick={savePrefs} disabled={prefsSaving}
+                    className="px-5 py-2 bg-[#1A56DB] text-white text-sm font-semibold rounded-xl hover:bg-blue-700 disabled:opacity-50 transition-colors">
+                    {prefsSaving ? 'Saving…' : 'Save Preferences'}
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Error */}
