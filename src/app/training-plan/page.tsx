@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react'
 import Sidebar from '@/components/Sidebar'
 import MainContent from '@/components/MainContent'
+import RunRouteMap from '@/components/RunRouteMap'
 import { useSession } from 'next-auth/react'
 import { redirect } from 'next/navigation'
 
@@ -24,6 +25,9 @@ interface Preferences {
   severity_level: string
   injury_constraints: string[]
   injury_notes: string
+  home_location: string
+  home_lat: number | null
+  home_lng: number | null
 }
 
 interface DayPlan {
@@ -93,7 +97,17 @@ function getStyle(s: string) {
 
 // ── Day card ──────────────────────────────────────────────────────────────────
 
-function DayCard({ day, id }: { day: DayPlan; id: string }) {
+const RUN_SESSION_TYPES = /easy|recovery|long|tempo|interval/i
+
+function extractDistanceKm(details: string[]): number {
+  for (const d of details) {
+    const m = d.match(/(\d+(?:\.\d+)?)\s*km/i)
+    if (m) return parseFloat(m[1])
+  }
+  return 5
+}
+
+function DayCard({ day, id, homeLat, homeLng, homeLocation }: { day: DayPlan; id: string; homeLat: number | null; homeLng: number | null; homeLocation: string }) {
   const style = getStyle(day.sessionType)
   return (
     <div id={id} className={`bg-white rounded-2xl shadow-sm border border-gray-100 border-t-4 ${style.border} overflow-hidden`}>
@@ -126,6 +140,17 @@ function DayCard({ day, id }: { day: DayPlan; id: string }) {
               ))}
             </ul>
           </div>
+        )}
+
+        {/* Route map for run sessions */}
+        {homeLat && homeLng && RUN_SESSION_TYPES.test(day.sessionType) && (
+          <RunRouteMap
+            lat={homeLat}
+            lng={homeLng}
+            distanceKm={extractDistanceKm(day.details)}
+            sessionType={day.sessionType}
+            locationName={homeLocation}
+          />
         )}
 
         {/* Nutrition + Coach note side by side on wider screens */}
@@ -179,7 +204,7 @@ function WeekStrip({ days }: { days: DayPlan[] }) {
 
 // ── Page ──────────────────────────────────────────────────────────────────────
 
-const DEFAULT_PREFS: Preferences = { runs_per_week: 5, gym_days_per_week: 0, allow_double_days: false, experience_level: 'intermediate', notes: '', injury_active: false, injury_location: '', severity_level: 'mild', injury_constraints: [], injury_notes: '' }
+const DEFAULT_PREFS: Preferences = { runs_per_week: 5, gym_days_per_week: 0, allow_double_days: false, experience_level: 'intermediate', notes: '', injury_active: false, injury_location: '', severity_level: 'mild', injury_constraints: [], injury_notes: '', home_location: '', home_lat: null, home_lng: null }
 
 export default function TrainingPlan() {
   const { data: session, status } = useSession()
@@ -194,6 +219,7 @@ export default function TrainingPlan() {
   const [prefsOpen, setPrefsOpen] = useState(false)
   const [prefsSaving, setPrefsSaving] = useState(false)
   const [prefsDraft, setPrefsDraft] = useState<Preferences>(DEFAULT_PREFS)
+  const [gpsLoading, setGpsLoading] = useState(false)
 
   useEffect(() => {
     if (status === 'unauthenticated') redirect('/')
@@ -207,7 +233,7 @@ export default function TrainingPlan() {
     const prefsData = await prefsRes.json()
     setState(planData)
     if (prefsData && prefsData.runs_per_week != null) {
-      const p: Preferences = { runs_per_week: prefsData.runs_per_week, gym_days_per_week: prefsData.gym_days_per_week ?? 0, allow_double_days: prefsData.allow_double_days ?? false, experience_level: prefsData.experience_level ?? 'intermediate', notes: prefsData.notes ?? '', injury_active: prefsData.injury_active ?? false, injury_location: prefsData.injury_location ?? '', severity_level: prefsData.severity_level ?? 'mild', injury_constraints: prefsData.injury_constraints ?? [], injury_notes: prefsData.injury_notes ?? '' }
+      const p: Preferences = { runs_per_week: prefsData.runs_per_week, gym_days_per_week: prefsData.gym_days_per_week ?? 0, allow_double_days: prefsData.allow_double_days ?? false, experience_level: prefsData.experience_level ?? 'intermediate', notes: prefsData.notes ?? '', injury_active: prefsData.injury_active ?? false, injury_location: prefsData.injury_location ?? '', severity_level: prefsData.severity_level ?? 'mild', injury_constraints: prefsData.injury_constraints ?? [], injury_notes: prefsData.injury_notes ?? '', home_location: prefsData.home_location ?? '', home_lat: prefsData.home_lat ?? null, home_lng: prefsData.home_lng ?? null }
       setPrefs(p)
       setPrefsDraft(p)
       setPrefsSet(true)
@@ -215,6 +241,31 @@ export default function TrainingPlan() {
       setPrefsOpen(true)
     }
     setLoading(false)
+  }
+
+  async function useGPS() {
+    setGpsLoading(true)
+    navigator.geolocation.getCurrentPosition(async (pos) => {
+      const { latitude: lat, longitude: lng } = pos.coords
+      const token = process.env.NEXT_PUBLIC_MAPBOX_TOKEN
+      const res = await fetch(`https://api.mapbox.com/geocoding/v5/mapbox.places/${lng},${lat}.json?types=place,locality&access_token=${token}`)
+      const data = await res.json()
+      const name = data.features?.[0]?.place_name ?? `${lat.toFixed(3)}, ${lng.toFixed(3)}`
+      setPrefsDraft(d => ({ ...d, home_lat: lat, home_lng: lng, home_location: name }))
+      setGpsLoading(false)
+    }, () => setGpsLoading(false))
+  }
+
+  async function geocodeLocation(query: string) {
+    if (!query.trim()) return
+    const token = process.env.NEXT_PUBLIC_MAPBOX_TOKEN
+    const res = await fetch(`https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(query)}.json?types=place,locality,postcode&access_token=${token}`)
+    const data = await res.json()
+    const feature = data.features?.[0]
+    if (feature) {
+      const [lng, lat] = feature.center
+      setPrefsDraft(d => ({ ...d, home_lat: lat, home_lng: lng, home_location: feature.place_name }))
+    }
   }
 
   async function savePrefs() {
@@ -370,6 +421,35 @@ export default function TrainingPlan() {
                   />
                 </div>
 
+                {/* ── Home Location ── */}
+                <div className="border-t border-gray-100 pt-4 space-y-2">
+                  <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide block">Home Location <span className="font-normal">(for route maps)</span></label>
+                  <div className="flex gap-2">
+                    <input
+                      value={prefsDraft.home_location}
+                      onChange={e => setPrefsDraft(d => ({ ...d, home_location: e.target.value, home_lat: null, home_lng: null }))}
+                      onBlur={e => geocodeLocation(e.target.value)}
+                      placeholder="e.g. Manchester, UK or M1 1AE"
+                      className="flex-1 text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                    <button
+                      onClick={useGPS}
+                      disabled={gpsLoading}
+                      title="Use my current location"
+                      className="px-3 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg text-gray-600 transition-colors disabled:opacity-50"
+                    >
+                      {gpsLoading ? (
+                        <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/></svg>
+                      ) : (
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+                      )}
+                    </button>
+                  </div>
+                  {prefsDraft.home_lat && (
+                    <p className="text-xs text-green-600 font-medium">✓ Location found — route maps will appear on run days</p>
+                  )}
+                </div>
+
                 {/* ── Injury / Limitation ── */}
                 <div className="border-t border-gray-100 pt-4 space-y-4">
                   <div className="flex items-center justify-between">
@@ -490,7 +570,7 @@ export default function TrainingPlan() {
 
               {/* Day cards */}
               <div className="space-y-4">
-                {parsed.days.map((day, i) => <DayCard key={i} day={day} id={`day-${i}`} />)}
+                {parsed.days.map((day, i) => <DayCard key={i} day={day} id={`day-${i}`} homeLat={prefs.home_lat} homeLng={prefs.home_lng} homeLocation={prefs.home_location} />)}
               </div>
 
               {/* Week summary */}

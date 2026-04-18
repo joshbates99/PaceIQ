@@ -21,12 +21,12 @@ export async function POST(req: NextRequest) {
   if (!session?.user?.id) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const body = await req.json()
-  const { runs_per_week, gym_days_per_week, allow_double_days, experience_level, notes, injury_active, injury_location, severity_level, injury_constraints, injury_notes } = body
+  const { runs_per_week, gym_days_per_week, allow_double_days, experience_level, notes, injury_active, injury_location, severity_level, injury_constraints, injury_notes, home_location, home_lat, home_lng } = body
 
   const { data, error } = await supabaseAdmin
     .from('user_preferences')
     .upsert(
-      { user_id: session.user.id, runs_per_week, gym_days_per_week, allow_double_days, experience_level, notes, injury_active: injury_active ?? false, injury_location: injury_location || null, severity_level: severity_level || null, injury_constraints: injury_constraints ?? [], injury_notes: injury_notes || null, updated_at: new Date().toISOString() },
+      { user_id: session.user.id, runs_per_week, gym_days_per_week, allow_double_days, experience_level, notes, injury_active: injury_active ?? false, injury_location: injury_location || null, severity_level: severity_level || null, injury_constraints: injury_constraints ?? [], injury_notes: injury_notes || null, home_location: home_location || null, home_lat: home_lat ?? null, home_lng: home_lng ?? null, updated_at: new Date().toISOString() },
       { onConflict: 'user_id' }
     )
     .select()

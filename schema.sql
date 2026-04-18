@@ -138,3 +138,8 @@ ALTER TABLE user_preferences ADD COLUMN IF NOT EXISTS injury_location   TEXT;
 ALTER TABLE user_preferences ADD COLUMN IF NOT EXISTS severity_level    TEXT;
 ALTER TABLE user_preferences ADD COLUMN IF NOT EXISTS injury_constraints TEXT[]   DEFAULT '{}';
 ALTER TABLE user_preferences ADD COLUMN IF NOT EXISTS injury_notes      TEXT;
+
+-- ─── Location fields on user_preferences ─────────────────────────────────────
+ALTER TABLE user_preferences ADD COLUMN IF NOT EXISTS home_location TEXT;
+ALTER TABLE user_preferences ADD COLUMN IF NOT EXISTS home_lat      DOUBLE PRECISION;
+ALTER TABLE user_preferences ADD COLUMN IF NOT EXISTS home_lng      DOUBLE PRECISION;
