@@ -143,14 +143,20 @@ function DayCard({ day, id, homeLat, homeLng, homeLocation }: { day: DayPlan; id
         )}
 
         {/* Route map for run sessions */}
-        {homeLat && homeLng && RUN_SESSION_TYPES.test(day.sessionType) && (
-          <RunRouteMap
-            lat={homeLat}
-            lng={homeLng}
-            distanceKm={extractDistanceKm(day.details)}
-            sessionType={day.sessionType}
-            locationName={homeLocation}
-          />
+        {RUN_SESSION_TYPES.test(day.sessionType) && (
+          homeLat && homeLng ? (
+            <RunRouteMap
+              lat={homeLat}
+              lng={homeLng}
+              distanceKm={extractDistanceKm(day.details)}
+              sessionType={day.sessionType}
+              locationName={homeLocation}
+            />
+          ) : (
+            <p className="mt-3 text-xs text-gray-400 bg-gray-50 rounded-xl px-3 py-2">
+              Set your home location in ⚙️ Preferences to see route maps here.
+            </p>
+          )
         )}
 
         {/* Nutrition + Coach note side by side on wider screens */}
